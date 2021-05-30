@@ -1,0 +1,28 @@
+version '2.1'
+
+services:
+  mysql_dtabase:
+    container_name: qq_project_mysql_database
+    image: "mysql:latest"
+    environment:
+      MYSQL_DATABASE: my_db
+      MYSQL_ROOT_PASSWORD: b42WePOwFqNS
+    ports:
+    - 3306:3306
+# Блок с проверкой живости БД
+    healthcheck:
+      test: ["CMD", "mysqladmin", "-uroot", "-pb42WePOwFqNS", "ping", "-h", "127.0.0.1"]
+      timeout: 20s
+      retries: 10
+
+  app_server:
+    container_name: qq_project_server
+    build: ./
+    ports:
+    - 5005:5005
+    links:
+      - mysql_database:mysql_database
+# Зависимость от того, что ДБ живая
+    dependes_on:
+      mysql_database:
+        condition: service_healthy
