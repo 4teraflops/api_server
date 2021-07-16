@@ -28,7 +28,7 @@ allow_api_users = {"admin": generate_password_hash(f"{basic_password}")}
 
 class Server:
 
-    def __init__(self, host, port, db_host, db_port, user, password, db_name, rebuild_db=False):
+    def __init__(self, host, port, db_host, db_port, user, password, db_name, rebuild_db=True):
         self.host = host
         self.port = port
 
