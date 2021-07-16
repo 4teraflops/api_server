@@ -1,6 +1,6 @@
 FROM python:3.8.2
 
-ADD /requirements.txt project/reqiurements.txt
+ADD /requirements.txt project/requirements.txt
 ADD /app/api/config.txt project/app/api/config.txt
 ADD /app/api/server.py project/app/api/server.txt
 ADD /app/api/utils.py project/app/api/utils.py
