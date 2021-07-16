@@ -21,30 +21,30 @@ class DBInteraction:
         self.engine = self.mysql_connection.connection.engine
 
         if rebuild_db:
-            self.create_table_users()
-            #self.create_table_musical_compositions()
+            self.create_tables()
+            # self.create_table_musical_compositions()
 
-    def create_table_users(self):
+    def create_tables(self):
         if not self.engine.dialect.has_table(self.engine, 'users'):
             Base.metadata.tables['users'].create(self.engine)  # Создание таблицы из моделей если нет такой
         else:
-            #pass
+            # pass
             self.mysql_connection.execute_query('DROP TABLE IF EXISTS users')  # Грохаем таблицу если такая есть
             Base.metadata.tables['users'].create(self.engine)
             logger.info('Table users deleted')
 
-    #def create_table_musical_compositions(self):
+    # def create_table_musical_compositions(self):
     #    if not self.engine.dialect.has_table(self.engine, 'musical_compositions'):
     #        Base.metadata.tables['musical_compositions'].create(self.engine)  # Создание таблицы из моделей если нет такой
     #    else:
     #        self.mysql_connection.execute_query('DROP TABLE IF EXISTS musical_compositions')  # Грохаем таблицу если такая есть
     #        Base.metadata.tables['musical_compositions'].create(self.engine)
 
-    def add_user(self, username, email, password, phone, gender, gender_search, balance, age):
+    def add_user(self, uuid, username, email, phone, gender, gender_search, balance, age):
         user = User(
+            uuid=uuid,
             username=username,
             email=email,
-            password=password,
             phone=phone,
             gender=gender,
             gender_search=gender_search,
@@ -52,7 +52,7 @@ class DBInteraction:
             age=age
         )
         self.mysql_connection.session.add(user)
-        return self.get_user_info(username)
+        return self.get_user_info(uuid)
 
     def check_username(self, username):
         user = self.mysql_connection.session.query(User).filter_by(username=username).first()
@@ -61,9 +61,22 @@ class DBInteraction:
         else:
             return False
 
+    def check_uuid(self, uuid):
+        try:
+            uuid = self.mysql_connection.session.query(User).filter_by(uuid=uuid).first()
+        except Exception as e:
+            logger.error(f'exception: {e}')
+            return 'UUID bad value'
+        if uuid:
+            #logger.info(f'uuid: {uuid}')
+            return True
+        else:
+            return False
+
     def check_email(self, email):
         email = self.mysql_connection.session.query(User).filter_by(email=email).first()
-        if email:
+        if email is not None:
+            logger.info(f'email: {str(email)}')
             return True
         else:
             return False
@@ -75,26 +88,37 @@ class DBInteraction:
         else:
             return False
 
-    def get_user_info(self, username):
+    def get_user_info(self, uuid):
         # Находим пользователя в базе
-        user = self.mysql_connection.session.query(User).filter_by(username=username).first()
+        user = self.mysql_connection.session.query(User).filter_by(uuid=uuid).first()
         if user:
             self.mysql_connection.session.expire_all()
-            return {'uuid': user.uuid, 'username': user.username, 'email': user.email, 'password': user.password, 'Phone': user.phone, 'Gender': user.gender, 'gender_search': user.gender_search, 'balance': user.balance, 'age': user.age}
+            return {'uuid': user.uuid, 'username': user.username, 'email': user.email, 'phone': user.phone,
+                    'Gender': user.gender, 'gender_search': user.gender_search, 'balance': user.balance,
+                    'age': user.age}
         else:
             raise UserNotFoundException('User not found')
 
-    def edit_user_info(self, username, new_username=None, new_email=None, new_password=None, new_phone=None):  # Последние 3 переменные установлены по-умолчанию None
-        user = self.mysql_connection.session.query(User).filter_by(username=username).first()
+    def edit_user_info(self, uuid, new_username=None, new_email=None, new_phone=None, new_gender=None, new_gender_search=None, new_balance=None, new_age=None):
+        user = self.mysql_connection.session.query(User).filter_by(uuid=uuid).first()
+        #logger.info(f'new_phone: {new_phone}')
         if user:
-            if new_username is not None:
+            if new_username is not None and new_username != '':
                 user.username = new_username
             elif new_email is not None:
                 user.email = new_email
-            elif new_password is not None:
-                user.password = new_password
             elif new_phone is not None:
+                #logger.info(f'new_phone: {new_phone}')
                 user.phone = new_phone
-            return self.get_user_info(username if new_username is None else new_username)
+            elif new_gender is not None:
+                user.gender = new_gender
+            elif new_gender_search is not None:
+                user.gender_search = new_gender_search
+            elif new_balance is not None:
+                user.balance = new_balance
+            elif new_age is not None:
+                user.age = new_age
+            return self.get_user_info(uuid)
+#            return self.get_user_info(username if new_username is None else new_username)
         else:
             raise UserNotFoundException('User not found')

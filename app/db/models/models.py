@@ -12,18 +12,16 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = 'users'
 
-    uuid = Column(UUIDType(binary=False), primary_key=True, default=uuid.uuid4)
-    username = Column(VARCHAR(50), nullable=True)
-    password = Column(VARCHAR(300), nullable=False)
-    email = Column(VARCHAR(40), nullable=False)
-    phone = Column(VARCHAR(20), nullable=False)
+    uuid = Column(UUIDType(binary=False), primary_key=True)
+    username = Column(VARCHAR(50), nullable=True, default=None)
+    email = Column(VARCHAR(40), nullable=True, default=None)
+    phone = Column(VARCHAR(20), nullable=True, default=None)
     gender = Column(VARCHAR(10), nullable=False)
     gender_search = Column(VARCHAR(10), nullable=False)
     balance = Column(INT, default=0, nullable=False)
     age = Column(SMALLINT, nullable=False)
 
     UniqueConstraint(uuid, name='uuid')
-    UniqueConstraint(username, name='username')
     UniqueConstraint(email, name='email')
     UniqueConstraint(phone, name='phone')
 
