@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, VARCHAR, UniqueConstraint, INT, SMALLINT
+from sqlalchemy import Column, Integer, ForeignKey, VARCHAR, UniqueConstraint, INT, SMALLINT, DATE
 from sqlalchemy.ext.declarative import declarative_base  # База объектов, из которой будем импортировать все наши модели
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
@@ -19,7 +19,7 @@ class User(Base):
     gender = Column(VARCHAR(10), nullable=False)
     gender_search = Column(VARCHAR(10), nullable=False)
     balance = Column(INT, default=0, nullable=False)
-    age = Column(SMALLINT, nullable=False)
+    birthday = Column(DATE, nullable=False)
 
     UniqueConstraint(uuid, name='uuid')
     UniqueConstraint(email, name='email')

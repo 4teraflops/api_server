@@ -1,7 +1,8 @@
 from app.db.client.client import MySQLConnection
-from app.db.exceptions import UserNotFoundException
+from app.db.exceptions import UserNotFoundException, OperationalErrorException
 from app.db.models.models import Base, User
 from loguru import logger
+from sqlalchemy import exc
 
 logger.add(f'log/{__name__}.log', format='{time} {level} {message}', level='DEBUG', rotation='10 MB', compression='zip')
 
@@ -40,19 +41,24 @@ class DBInteraction:
     #        self.mysql_connection.execute_query('DROP TABLE IF EXISTS musical_compositions')  # Грохаем таблицу если такая есть
     #        Base.metadata.tables['musical_compositions'].create(self.engine)
 
-    def add_user(self, uuid, username, email, phone, gender, gender_search, balance, age):
-        user = User(
-            uuid=uuid,
-            username=username,
-            email=email,
-            phone=phone,
-            gender=gender,
-            gender_search=gender_search,
-            balance=balance,
-            age=age
-        )
-        self.mysql_connection.session.add(user)
-        return self.get_user_info(uuid)
+    def add_user(self, uuid, username, email, phone, gender, gender_search, balance, birthday):
+        try:
+            user = User(
+                uuid=uuid,
+                username=username,
+                email=email,
+                phone=phone,
+                gender=gender,
+                gender_search=gender_search,
+                balance=balance,
+                birthday=birthday
+            )
+            self.mysql_connection.session.add(user)
+            return self.get_user_info(uuid)
+        except exc.OperationalError as e:
+            # Ошибки операций с БД пишем в лог и возвращаем 400 ошибку с пояснением.
+            logger.error(e)
+            raise OperationalErrorException('Bad request. Check types for parameters.')
 
     def check_username(self, username):
         user = self.mysql_connection.session.query(User).filter_by(username=username).first()
@@ -95,11 +101,11 @@ class DBInteraction:
             self.mysql_connection.session.expire_all()
             return {'uuid': user.uuid, 'username': user.username, 'email': user.email, 'phone': user.phone,
                     'Gender': user.gender, 'gender_search': user.gender_search, 'balance': user.balance,
-                    'age': user.age}
+                    'birthday': user.birthday}
         else:
             raise UserNotFoundException('User not found')
 
-    def edit_user_info(self, uuid, new_username=None, new_email=None, new_phone=None, new_gender=None, new_gender_search=None, new_balance=None, new_age=None):
+    def edit_user_info(self, uuid, new_username=None, new_email=None, new_phone=None, new_gender=None, new_gender_search=None, new_balance=None, new_birthday=None):
         user = self.mysql_connection.session.query(User).filter_by(uuid=uuid).first()
         #logger.info(f'new_phone: {new_phone}')
         if user:
@@ -116,8 +122,8 @@ class DBInteraction:
                 user.gender_search = new_gender_search
             elif new_balance is not None:
                 user.balance = new_balance
-            elif new_age is not None:
-                user.age = new_age
+            elif new_birthday is not None:
+                user.birthday = new_birthday
             return self.get_user_info(uuid)
 #            return self.get_user_info(username if new_username is None else new_username)
         else:

@@ -6,7 +6,7 @@ from werkzeug.exceptions import abort
 from pymysql.err import IntegrityError
 from flask_httpauth import HTTPBasicAuth
 from app.api.utils import config_parser
-from app.db.exceptions import UserNotFoundException
+from app.db.exceptions import UserNotFoundException, OperationalErrorException
 from app.db.interaction.interaction import DBInteraction
 from werkzeug.security import generate_password_hash, check_password_hash
 import sys
@@ -159,11 +159,11 @@ class Server:
             balance = 0
 
         try:
-            age = request_body['age']
-            if age == '':
-                return 'age can not be null', 400
+            birthday = request_body['birthday']
+            if birthday == '':
+                return 'birthday can not be null', 400
         except KeyError:
-            return 'age can not be null', 400
+            return 'birthday can not be null', 400
 
         # Валидируем параметры на соответствие требованиям sql
         # Необязательные параметры
@@ -174,33 +174,28 @@ class Server:
                 return f'email is more 40 characters', 400
             elif len(phone) > 20:
                 return 'phone is more 20 characters', 400
-        # Обязательные параметры
-        elif type(uuid) != str or type(gender) != str or type(gender_search) != str:
-            return f'Parameters uuid, gender, gender_search must be a string', 400
-        elif type(balance) != int or type(age) != int:
-            return f'Parameters age and balance must be int', 400
-        # Проверка возраста на реальность
-        elif age <= 16 or age >= 110:
-            return f'age must be > 16 and < 110', 400
 
         #logger.info(f'check_username" {check_username}')
         #logger.info(f'check_email: {check_email}')
         #if sys.getsizeof(uuid) != 16:
         #    return f'UUID must be 16 bytes string. Not {sys.getsizeof(uuid)}.'
 
-        self.db_interaction.add_user(
-            uuid=uuid,
-            username=username,
-            email=email,
-            phone=phone,
-            gender=gender,
-            gender_search=gender_search,
-            balance=balance,
-            age=age
-        )
-        # Берем из БД объект user и возвращаем на запрос.
-        user = self.db_interaction.get_user_info(uuid)
-        return f'Success added User: {user}', 201  # Вместе с http status code
+        try:
+            self.db_interaction.add_user(
+                uuid=uuid,
+                username=username,
+                email=email,
+                phone=phone,
+                gender=gender,
+                gender_search=gender_search,
+                balance=balance,
+                birthday=birthday
+            )
+            # Берем из БД объект user и возвращаем на запрос.
+            user = self.db_interaction.get_user_info(uuid)
+            return f'Success added User: {user}', 201  # Вместе с http status code
+        except OperationalErrorException:
+            abort(400, description='Bad request. Check types for parameters.')
 
     @auth.login_required
     def get_user_info(self, uuid):
@@ -208,6 +203,7 @@ class Server:
             #logger.info(f'username" {username}')
             # Проверка UUID на наличие в базе
             check_uuid = self.db_interaction.check_uuid(uuid)
+            # Возможно под это надо свой exception сделать
             if check_uuid is False:
                 abort(404, description='User not found')
 
@@ -296,11 +292,9 @@ class Server:
             new_balance = None
 
         try:
-            new_age = request_body['new_age']
-            if type(new_age) != int:
-                return 'new_age must be a integer', 400
+            new_birthday = request_body['new_birthday']
         except KeyError:
-            new_age = None
+            new_birthday = None
 
         self.db_interaction.edit_user_info(
             uuid=uuid,
@@ -310,7 +304,7 @@ class Server:
             new_gender=new_gender,
             new_gender_search=new_gender_search,
             new_balance=new_balance,
-            new_age=new_age
+            new_birthday=new_birthday
         )
         new_user_info = self.get_user_info(uuid)
         return f'Success edit user info: {new_user_info}', 200
